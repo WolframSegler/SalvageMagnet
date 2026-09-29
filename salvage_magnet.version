@@ -1,0 +1,13 @@
+{
+	"masterVersionFile":"https://raw.githubusercontent.com/WolframSegler/SalvageMagnet/main/salvage_magnet.version",
+	"modName":"Salvage Magnet",
+	"modThreadId":36088,
+	"modVersion": {
+		"major":1,
+		"minor":0,
+		"patch":0
+	},
+	"starsectorVersion":"0.98a-RC8",
+	"directDownloadURL":"https://github.com/WolframSegler/SalvageMagnet/releases/latest/download/SalvageMagnet.zip",
+	"changelogURL":"https://raw.githubusercontent.com/WolframSegler/SalvageMagnet/main/changelog.txt"
+}

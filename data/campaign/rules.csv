@@ -1,0 +1,18 @@
+id,trigger,conditions,script,text,options,notes
+magnet_scavengeOpen,OpenInteractionDialog,"$magnetScavenge score:1000
+$customType == debris_field_shared","MagnetScavenge begin
+ShowDefaultVisual
+MagnetScavenge descAll
+FireBest SalvageCheckHostile",Your $shipOrFleet assumes a stable orbit relative to the surrounding debris.,,
+magnet_derelictsOpen,OpenInteractionDialog,$magnetScavenge score:1000,"MagnetScavenge begin
+ShowDefaultVisual
+MagnetScavenge descAll
+FireBest SalvageCheckHostile",Your $shipOrFleet moves in among a loose cluster of drifting derelicts.,,
+magnet_scavengeExploreSelected,DialogOptionSelected,"$option == salExplore
+$magnetScavenge score:1000",MagnetScavenge explore,,,
+magnet_scavengeRecoverSelected,DialogOptionSelected,"$option == magnetRecover
+$magnetScavenge score:1000",MagnetScavenge recover,,,
+magnet_scavengeRecoverSkipped,DialogOptionSelected,"$option == magnetRecoverSkip
+$magnetScavenge score:1000",MagnetScavenge next,,,
+magnet_scavengeBeginSalvage,BeginSalvage,$magnetScavenge score:1000,"MagnetScavenge salvage
+MagnetScavenge next",,,
