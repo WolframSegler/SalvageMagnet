@@ -1,4 +1,4 @@
-package salvage_magnet.rulecmd;
+package aoescavenge.rulecmd;
 
 import java.util.*;
 
@@ -13,7 +13,7 @@ import com.fs.starfarer.api.impl.campaign.DerelictShipEntityPlugin;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.ShipRecoverySpecial;
 import com.fs.starfarer.api.util.Misc;
 
-public class MagnetRecovery extends ShipRecoverySpecial {
+public class AoERecovery extends ShipRecoverySpecial {
 
     public static class Candidate {
         public final SectorEntityToken source;
@@ -34,7 +34,7 @@ public class MagnetRecovery extends ShipRecoverySpecial {
     }
 
     public static List<Candidate> collect(List<SectorEntityToken> sources) {
-        MagnetRecovery recovery = new MagnetRecovery();
+        AoERecovery recovery = new AoERecovery();
         List<Candidate> result = new ArrayList<>();
         for (SectorEntityToken source : sources) {
             if (Misc.getSalvageSpecial(source) instanceof ShipRecoverySpecialData data) {
@@ -77,7 +77,7 @@ public class MagnetRecovery extends ShipRecoverySpecial {
     public static CargoAPI scuttle(Candidate candidate) {
         CargoAPI cargo = Global.getFactory().createCargo(true);
         if (!candidate.requiresStoryPoint()) {
-            new MagnetRecovery().addStuffFromMember(cargo, candidate.member);
+            new AoERecovery().addStuffFromMember(cargo, candidate.member);
         }
         return cargo;
     }

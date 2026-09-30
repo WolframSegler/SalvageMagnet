@@ -1,6 +1,6 @@
 {
     "magnetScavengeRadius" : 1000,
     "ruleCommandPackages" : [
-        "salvage_magnet.rulecmd"
+        "aoescavenge.rulecmd"
     ]
 }

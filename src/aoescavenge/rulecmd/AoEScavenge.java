@@ -1,4 +1,4 @@
-package salvage_magnet.rulecmd;
+package aoescavenge.rulecmd;
 
 import java.util.*;
 
@@ -28,18 +28,23 @@ import com.fs.starfarer.api.impl.campaign.terrain.DebrisFieldTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.util.WeightedRandomPicker;
 
-public class MagnetScavenge extends SalvageEntity {
-    public static final String TARGETS = "$magnetScavengeTargets";
-    public static final String FLAG = "$magnetScavenge";
-    public static final String STATE = "$magnetScavengeState";
+import aoescavenge.StockRules;
+
+public class AoEScavenge extends SalvageEntity {
+    public static final String TARGETS = "$aoeScavengeTargets";
+    public static final String FLAG = "$aoeScavenge";
+    public static final String STATE = "$aoeScavengeState";
     public static final String TYPE = "debris_field_shared";
-    public static final String RECOVER = "magnetRecover";
-    public static final String SKIP_RECOVERY = "magnetRecoverSkip";
+    public static final String RECOVER = "aoeRecover";
+    public static final String SKIP_RECOVERY = "aoeRecoverSkip";
+    public static final String OPENED = "AoEScavengeOpened";
 
     public static class State {
         public List<SectorEntityToken> targets;
         public SectorEntityToken proxy;
-        public List<MagnetRecovery.Candidate> recoverable = new ArrayList<>();
+        public List<AoERecovery.Candidate> recoverable = new ArrayList<>();
+        public Set<SectorEntityToken> recovered = new HashSet<>();
+        public Map<SectorEntityToken, CargoAPI> hauls = new LinkedHashMap<>();
         public CargoAPI loot = Global.getFactory().createCargo(true);
         public int index = -1;
         public long xp = 0L;
@@ -50,7 +55,6 @@ public class MagnetScavenge extends SalvageEntity {
     private Map<String, MemoryAPI> map;
 
     @Override
-    @SuppressWarnings("unchecked")
     public boolean execute(String ruleId, InteractionDialogAPI dialog, List<Misc.Token> params,
             Map<String, MemoryAPI> memoryMap) {
         if (dialog == null || params.isEmpty()) {
@@ -62,11 +66,7 @@ public class MagnetScavenge extends SalvageEntity {
 
         String command = params.get(0).getString(memoryMap);
         if ("begin".equals(command)) {
-            Misc.stopPlayerFleet();
-            State state = new State();
-            state.targets = new ArrayList<>((List<SectorEntityToken>) memory.get(TARGETS));
-            state.proxy = TYPE.equals(entity.getCustomEntityType()) ? entity : null;
-            memory.set(STATE, state, 0f);
+            begin();
         } else if ("descAll".equals(command)) {
             describe(state());
         } else if ("explore".equals(command)) {
@@ -77,6 +77,8 @@ public class MagnetScavenge extends SalvageEntity {
             next(state());
         } else if ("salvage".equals(command)) {
             salvage(state());
+        } else if ("defer".equals(command)) {
+            defer(state());
         }
 
         return true;
@@ -84,6 +86,45 @@ public class MagnetScavenge extends SalvageEntity {
 
     protected State state() {
         return (State) memory.get(STATE);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected void begin() {
+        List<SectorEntityToken> targets = new ArrayList<>((List<SectorEntityToken>) memory.get(TARGETS));
+        SectorEntityToken proxy = TYPE.equals(entity.getCustomEntityType()) ? entity : null;
+
+        if (proxy != null) {
+            SectorEntityToken scavenged = targets.get(0);
+            targets = StockRules.vetted(dialog, proxy, targets);
+            if (targets.size() < 2 || targets.get(0) != scavenged) {
+                focus(proxy, scavenged);
+                FireBest.fire(null, dialog, map, "OpenInteractionDialog");
+                return;
+            }
+        }
+
+        Misc.stopPlayerFleet();
+        State state = new State();
+        state.targets = targets;
+        state.proxy = proxy;
+        memory.set(STATE, state, 0f);
+        FireBest.fire(null, dialog, map, OPENED);
+    }
+
+    public static void aim(InteractionDialogAPI dialog, SectorEntityToken proxy, SectorEntityToken target) {
+        DebrisFieldTerrainPlugin field = field(target);
+        if (field == null) {
+            dialog.setInteractionTarget(target);
+        } else {
+            MemoryAPI fieldMemory = target.getMemory();
+            fieldMemory.set("$salvageDebrisField", field, 0f);
+            proxy.setFaction(target.getFaction().getId());
+            proxy.getLocation().set(target.getLocation());
+            proxy.setMemory(fieldMemory);
+            dialog.setInteractionTarget(proxy);
+        }
+
+        ((RuleBasedDialog) dialog.getPlugin()).updateMemory();
     }
 
     protected static DebrisFieldTerrainPlugin field(SectorEntityToken target) {
@@ -134,8 +175,8 @@ public class MagnetScavenge extends SalvageEntity {
 
         if (!fields.isEmpty()) {
             DebrisFieldTerrainPlugin best = Collections.max(fields, Comparator
-                    .comparingInt(MagnetScavenge::outlook)
-                    .thenComparingDouble(MagnetScavenge::lootValue)
+                    .comparingInt(AoEScavenge::outlook)
+                    .thenComparingDouble(AoEScavenge::lootValue)
                     .thenComparingDouble(DebrisFieldTerrainPlugin::getDaysLeft));
             bind(state, best.getEntity());
             new SalvageEntity().execute(null, dialog, Misc.tokenize("descDebris"), map);
@@ -149,16 +190,16 @@ public class MagnetScavenge extends SalvageEntity {
     }
 
     protected void explore(State state) {
-        state.recoverable = MagnetRecovery.collect(state.targets);
+        state.recoverable = AoERecovery.collect(state.targets);
         if (state.recoverable.isEmpty()) {
             next(state);
             return;
         }
 
-        MagnetRecovery.detachFromSources(state.recoverable);
+        AoERecovery.detachFromSources(state.recoverable);
 
         CampaignFleetAPI recoverable = Global.getFactory().createEmptyFleet("neutral", "patrolSmall", true);
-        for (MagnetRecovery.Candidate candidate : state.recoverable) {
+        for (AoERecovery.Candidate candidate : state.recoverable) {
             recoverable.getFleetData().addFleetMember(candidate.member);
         }
 
@@ -196,7 +237,7 @@ public class MagnetScavenge extends SalvageEntity {
 
     protected List<FleetMemberAPI> storyPointPool(State state) {
         List<FleetMemberAPI> pool = new ArrayList<>();
-        for (MagnetRecovery.Candidate candidate : state.recoverable) {
+        for (AoERecovery.Candidate candidate : state.recoverable) {
             if (candidate.requiresStoryPoint()) {
                 pool.add(candidate.member);
             }
@@ -206,7 +247,7 @@ public class MagnetScavenge extends SalvageEntity {
 
     protected List<FleetMemberAPI> regularPool(State state) {
         List<FleetMemberAPI> pool = new ArrayList<>();
-        for (MagnetRecovery.Candidate candidate : state.recoverable) {
+        for (AoERecovery.Candidate candidate : state.recoverable) {
             if (!candidate.requiresStoryPoint()) {
                 pool.add(candidate.member);
             }
@@ -234,8 +275,8 @@ public class MagnetScavenge extends SalvageEntity {
     protected void recovered(State state, List<FleetMemberAPI> selected) {
         new ShowDefaultVisual().execute(null, dialog, Misc.tokenize(""), map);
 
-        List<MagnetRecovery.Candidate> picked = new ArrayList<>();
-        for (MagnetRecovery.Candidate candidate : state.recoverable) {
+        List<AoERecovery.Candidate> picked = new ArrayList<>();
+        for (AoERecovery.Candidate candidate : state.recoverable) {
             if (selected.contains(candidate.member)) {
                 picked.add(candidate);
             }
@@ -243,14 +284,14 @@ public class MagnetScavenge extends SalvageEntity {
         state.recoverable.removeAll(picked);
 
         List<FleetMemberAPI> members = new ArrayList<>();
-        for (MagnetRecovery.Candidate candidate : picked) {
-            MagnetRecovery.recover(candidate, playerFleet);
+        for (AoERecovery.Candidate candidate : picked) {
+            AoERecovery.recover(candidate, playerFleet);
             members.add(candidate.member);
             text.addParagraph("The " + candidate.member.getShipName() + " is now part of your fleet.");
         }
         ListenerUtil.reportShipsRecovered(members, dialog);
 
-        for (MagnetRecovery.Candidate candidate : picked) {
+        for (AoERecovery.Candidate candidate : picked) {
             if (field(candidate.source) != null) {
                 continue;
             }
@@ -261,22 +302,33 @@ public class MagnetScavenge extends SalvageEntity {
             memory.set("$srs_baseHullId", candidate.member.getHullSpec().getBaseHullId(), 0f);
             FireAll.fire(null, dialog, map, "PostShipRecoverySpecial");
 
-            if (candidate.data.ships.isEmpty() && state.targets.remove(candidate.source)) {
-                CargoAPI extra = BaseSalvageSpecial.getCombinedExtraSalvage(candidate.source);
-                if (!extra.isEmpty()) {
-                    state.loot.addAll(extra);
-                    BaseSalvageSpecial.clearExtraSalvage(candidate.source);
-                    ListenerUtil.reportSpecialCargoGainedFromRecoveredDerelict(extra, dialog);
-                }
-                release(candidate.source);
-                Misc.fadeAndExpire(candidate.source, 1f);
+            if (candidate.data.ships.isEmpty()) {
+                state.recovered.add(candidate.source);
             }
         }
     }
 
+    protected void retire(State state, SectorEntityToken hull) {
+        CargoAPI extra = BaseSalvageSpecial.getCombinedExtraSalvage(hull);
+        if (!extra.isEmpty()) {
+            state.loot.addAll(extra);
+            BaseSalvageSpecial.clearExtraSalvage(hull);
+            ListenerUtil.reportSpecialCargoGainedFromRecoveredDerelict(extra, dialog);
+        }
+        Misc.fadeAndExpire(hull, 1f);
+    }
+
+    protected void defer(State state) {
+        SectorEntityToken target = state.targets.get(state.index);
+        if (state.recovered.contains(target)) {
+            retire(state, target);
+        }
+        next(state);
+    }
+
     protected void scuttleUnrecovered(State state) {
-        for (MagnetRecovery.Candidate candidate : state.recoverable) {
-            state.loot.addAll(MagnetRecovery.scuttle(candidate));
+        for (AoERecovery.Candidate candidate : state.recoverable) {
+            state.loot.addAll(AoERecovery.scuttle(candidate));
         }
         state.recoverable.clear();
     }
@@ -302,20 +354,16 @@ public class MagnetScavenge extends SalvageEntity {
         MemoryAPI targetMemory = target.getMemory();
         targetMemory.set(FLAG, true, 0f);
         targetMemory.set(STATE, state, 0f);
+        focus(state.proxy, target);
+    }
+
+    protected void focus(SectorEntityToken proxy, SectorEntityToken target) {
+        aim(dialog, proxy, target);
 
         DebrisFieldTerrainPlugin field = field(target);
-        if (field == null) {
-            dialog.setInteractionTarget(target);
-        } else {
-            targetMemory.set("$salvageDebrisField", field, 0f);
-            state.proxy.setFaction(target.getFaction().getId());
-            state.proxy.getLocation().set(target.getLocation());
-            state.proxy.setMemory(targetMemory);
-            dialog.setInteractionTarget(state.proxy);
+        if (field != null) {
             this.spec = configureDebrisSpec(field);
         }
-
-        ((RuleBasedDialog) dialog.getPlugin()).updateMemory();
         this.memory = getEntityMemory(map);
         this.entity = dialog.getInteractionTarget();
     }
@@ -348,15 +396,27 @@ public class MagnetScavenge extends SalvageEntity {
     }
 
     protected void salvage(State state) {
-        DebrisFieldTerrainPlugin field = field(state.targets.get(state.index));
-        if (field == null) {
-            salvageDerelict(state);
+        SectorEntityToken target = state.targets.get(state.index);
+        DebrisFieldTerrainPlugin field = field(target);
+        if (state.recovered.contains(target)) {
+            retire(state, target);
+        } else if (field == null) {
+            state.hauls.put(target, salvageDerelict(state));
         } else {
-            salvageField(state, field);
+            state.hauls.put(target, salvageField(state, field));
         }
     }
 
-    protected void salvageDerelict(State state) {
+    protected CargoAPI takeExtraSalvage() {
+        CargoAPI extra = BaseSalvageSpecial.getCombinedExtraSalvage(map);
+        BaseSalvageSpecial.clearExtraSalvage(map);
+        if (!extra.isEmpty()) {
+            ListenerUtil.reportExtraSalvageShown(entity);
+        }
+        return extra;
+    }
+
+    protected CargoAPI salvageDerelict(State state) {
         Random random = Misc.getRandom(memory.getLong("$salvageSeed"), 100);
         MutableStat valueRecovery = getValueRecoveryStat(true);
         float rareItemSkillMult = playerFleet.getStats().getDynamic().getValue("salvage_value_bonus_fleet");
@@ -369,9 +429,7 @@ public class MagnetScavenge extends SalvageEntity {
 
         CargoAPI salvage = generateSalvage(random, valueRecovery.getModifiedValue(), rareItemSkillMult,
                 computeOverallMultForDebrisField(), fuelMult, dropValue, dropRandom);
-        salvage.addAll(BaseSalvageSpecial.getCombinedExtraSalvage(map));
-        BaseSalvageSpecial.clearExtraSalvage(map);
-        state.loot.addAll(salvage);
+        salvage.addAll(takeExtraSalvage());
         state.xp += (long) (entity.hasSalvageXP() ? entity.getSalvageXP() : spec.getXpSalvage());
 
         if (!spec.hasTag("no_debris")) {
@@ -379,9 +437,10 @@ public class MagnetScavenge extends SalvageEntity {
         } else if (!spec.hasTag("no_remove")) {
             Misc.fadeAndExpire(entity, 1f);
         }
+        return salvage;
     }
 
-    protected void salvageField(State state, DebrisFieldTerrainPlugin field) {
+    protected CargoAPI salvageField(State state, DebrisFieldTerrainPlugin field) {
         DebrisFieldTerrainPlugin.DebrisFieldParams params = field.getParams();
         long seed = memory.getLong("$salvageSeed");
 
@@ -402,9 +461,7 @@ public class MagnetScavenge extends SalvageEntity {
 
         CargoAPI salvage = generateSalvage(random, valueRecovery.getModifiedValue(), rareItemSkillMult,
                 overallMult, fuelMult, dropValue, dropRandom);
-        salvage.addAll(BaseSalvageSpecial.getCombinedExtraSalvage(map));
-        BaseSalvageSpecial.clearExtraSalvage(map);
-        state.loot.addAll(salvage);
+        salvage.addAll(takeExtraSalvage());
         state.xp += (long) spec.getXpSalvage();
 
         params.density -= overallMult;
@@ -413,6 +470,19 @@ public class MagnetScavenge extends SalvageEntity {
         }
         field.getEntity().getMemoryWithoutUpdate().set("$salvageSeed", random.nextLong());
         field.setScavenged(true);
+        return salvage;
+    }
+
+    protected void reportHauls(State state) {
+        Iterator<Map.Entry<SectorEntityToken, CargoAPI>> hauls = state.hauls.entrySet().iterator();
+        while (hauls.hasNext()) {
+            Map.Entry<SectorEntityToken, CargoAPI> haul = hauls.next();
+            aim(dialog, state.proxy, haul.getKey());
+            if (hauls.hasNext()) {
+                ListenerUtil.reportAboutToShowLootToPlayer(haul.getValue(), dialog);
+            }
+            state.loot.addAll(haul.getValue());
+        }
     }
 
     protected void accidents(State state, DebrisFieldTerrainPlugin field) {
@@ -478,6 +548,7 @@ public class MagnetScavenge extends SalvageEntity {
         for (SectorEntityToken target : state.targets) {
             release(target);
         }
+        reportHauls(state);
 
         if (state.crewLost > 0 && state.machineryLost > 0) {
             text.addPara("Accidents during the operation have resulted in the loss of %s crew and %s heavy machinery.",

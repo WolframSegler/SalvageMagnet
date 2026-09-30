@@ -1,2 +1,2 @@
 name,id,type,tags,activationDays,activationCooldown,durationDays,deactivationDays,deactivationCooldown,unlockedAtStart,defaultForAIFleet,musicSuppression,uiOn,uiOff,uiLoop,worldOn,worldOff,worldLoop,icon,plugin,ai,desc,sortOrder
-Magnet Scavenge,magnet_scavenge,DURATION,,0,,0,0,0.2,TRUE,,,ui_scavenge_on,,,,,,graphics/icons/abilities/magnetscavenge.png,salvage_magnet.MagnetScavengeAbility,,Pick through debris fields for anything of value.,600
+Magnet Scavenge,magnet_scavenge,DURATION,,0,,0,0,0.2,TRUE,,,ui_scavenge_on,,,,,,graphics/icons/abilities/magnetscavenge.png,aoescavenge.AoEScavengeAbility,,Pick through debris fields for anything of value.,600

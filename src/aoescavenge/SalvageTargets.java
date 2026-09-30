@@ -1,4 +1,4 @@
-package salvage_magnet;
+package aoescavenge;
 
 import java.util.*;
 
@@ -9,22 +9,37 @@ import com.fs.starfarer.api.campaign.CustomCampaignEntityAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.impl.campaign.DerelictShipEntityPlugin;
+import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
 import com.fs.starfarer.api.impl.campaign.procgen.DefenderDataOverride;
 import com.fs.starfarer.api.impl.campaign.procgen.SalvageEntityGenDataSpec;
 import com.fs.starfarer.api.impl.campaign.procgen.themes.SalvageEntityGeneratorOld;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.SalvageGenFromSeed;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.BlueprintSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.BreadcrumbSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.CargoManifestSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.DomainSurveyDerelictSpecial;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.ShipRecoverySpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.SleeperPodsSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.SurveyDataSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.TopographicDataSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.TransmitterTrapSpecial;
 import com.fs.starfarer.api.impl.campaign.terrain.DebrisFieldTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 
-import salvage_magnet.rulecmd.MagnetScavenge;
+import aoescavenge.rulecmd.AoEScavenge;
 
 public final class SalvageTargets {
     public static final float RADIUS = Global.getSettings().getFloat("magnetScavengeRadius");
 
-    private static final Set<String> BLACKLISTED_HULLS = Set.of(
-        "ziggurat",
-        "onslaught_mk1"
+    private static final Set<Class<?>> STOCK_SPECIALS = Set.of(
+        BlueprintSpecial.BlueprintSpecialData.class,
+        BreadcrumbSpecial.BreadcrumbSpecialData.class,
+        CargoManifestSpecial.CargoManifestSpecialData.class,
+        DomainSurveyDerelictSpecial.DomainSurveyDerelictSpecialData.class,
+        SleeperPodsSpecial.SleeperPodsSpecialData.class,
+        SurveyDataSpecial.SurveyDataSpecialData.class,
+        TopographicDataSpecial.TopographicDataSpecialData.class,
+        TransmitterTrapSpecial.TransmitterTrapSpecialData.class
     );
 
     private SalvageTargets() {
@@ -59,12 +74,12 @@ public final class SalvageTargets {
     }
 
     public static boolean isGroupableField(DebrisFieldTerrainPlugin field) {
-        if (field.isScavenged()) {
+        if (field.isScavenged() || !isOrdinarySalvage(field.getEntity())) {
             return false;
         }
 
         DebrisFieldTerrainPlugin.DebrisFieldParams params = field.getParams();
-        SalvageEntityGenDataSpec shared = SalvageEntityGeneratorOld.getSalvageSpec(MagnetScavenge.TYPE);
+        SalvageEntityGenDataSpec shared = SalvageEntityGeneratorOld.getSalvageSpec(AoEScavenge.TYPE);
         return !rollsDefenders(field.getEntity(),
             params.minStr * params.density,
             params.maxStr * params.density,
@@ -76,15 +91,10 @@ public final class SalvageTargets {
 
     public static boolean isGroupableDerelict(SectorEntityToken entity) {
         if (!(entity instanceof CustomCampaignEntityAPI custom)
-                || !(custom.getCustomPlugin() instanceof DerelictShipEntityPlugin plugin)
+                || !(custom.getCustomPlugin() instanceof DerelictShipEntityPlugin)
                 || entity.isDiscoverable()
-                || entity.hasTag("fading_out_and_expiring")) {
-            return false;
-        }
-
-        ShipRecoverySpecial.PerShipData ship = plugin.getData().ship;
-        if (ship == null || ship.getVariant() == null
-                || BLACKLISTED_HULLS.contains(ship.getVariant().getHullSpec().getHullId())) {
+                || entity.hasTag("fading_out_and_expiring")
+                || !isOrdinarySalvage(entity)) {
             return false;
         }
 
@@ -100,6 +110,18 @@ public final class SalvageTargets {
 
     public static boolean isInRange(CampaignFleetAPI fleet, SectorEntityToken entity) {
         return Misc.getDistance(fleet, entity) < RADIUS;
+    }
+
+    private static boolean isOrdinarySalvage(SectorEntityToken entity) {
+        return !entity.getMemoryWithoutUpdate().getBoolean(MemFlags.ENTITY_MISSION_IMPORTANT)
+            && isStockSpecial(Misc.getSalvageSpecial(entity))
+            && isStockSpecial(Misc.getPrevSalvageSpecial(entity));
+    }
+
+    private static boolean isStockSpecial(Object special) {
+        return special == null
+            || special instanceof ShipRecoverySpecial.ShipRecoverySpecialData
+            || STOCK_SPECIALS.contains(special.getClass());
     }
 
     private static String salvageSpecId(SectorEntityToken entity) {

@@ -1,4 +1,4 @@
-package salvage_magnet;
+package aoescavenge;
 
 import java.util.*;
 
@@ -8,18 +8,20 @@ import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.RuleBasedDialog;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 
-import salvage_magnet.rulecmd.MagnetScavenge;
+import aoescavenge.rulecmd.AoEScavenge;
 
-public class MagnetScavengeListener extends BaseCampaignEventListener {
+public class AoEScavengeListener extends BaseCampaignEventListener {
 
-    public MagnetScavengeListener(boolean permaRegister) {
+    public AoEScavengeListener(boolean permaRegister) {
         super(permaRegister);
     }
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         SectorEntityToken target = dialog.getInteractionTarget();
-        if (!(dialog.getPlugin() instanceof RuleBasedDialog plugin) || !SalvageTargets.isGroupableDerelict(target)) {
+        if (!(dialog.getPlugin() instanceof RuleBasedDialog plugin)
+                || dialog.getPlugin().getMemoryMap() == null
+                || !SalvageTargets.isGroupableDerelict(target)) {
             return;
         }
 
@@ -30,8 +32,13 @@ public class MagnetScavengeListener extends BaseCampaignEventListener {
             return;
         }
 
-        target.getMemory().set(MagnetScavenge.TARGETS, targets, 0f);
-        target.getMemory().set(MagnetScavenge.FLAG, true, 0f);
+        targets = StockRules.vetted(dialog, null, targets);
+        if (targets.size() < 2 || targets.get(0) != target) {
+            return;
+        }
+
+        target.getMemory().set(AoEScavenge.TARGETS, targets, 0f);
+        target.getMemory().set(AoEScavenge.FLAG, true, 0f);
 
         if (dialog.getOptionPanel().hasOptions()) {
             dialog.getTextPanel().clear();

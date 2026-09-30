@@ -1,4 +1,4 @@
-package salvage_magnet;
+package aoescavenge;
 
 import java.util.*;
 
@@ -10,9 +10,9 @@ import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.abilities.ScavengeAbility;
 import com.fs.starfarer.api.impl.campaign.terrain.DebrisFieldTerrainPlugin;
 
-import salvage_magnet.rulecmd.MagnetScavenge;
+import aoescavenge.rulecmd.AoEScavenge;
 
-public class MagnetScavengeAbility extends ScavengeAbility {
+public class AoEScavengeAbility extends ScavengeAbility {
 
     @Override
     protected void activateImpl() {
@@ -27,18 +27,19 @@ public class MagnetScavengeAbility extends ScavengeAbility {
         }
 
         List<SectorEntityToken> targets = SalvageTargets.near(fleet);
-        if (targets.size() < 2 || !targets.contains(current.getEntity())) {
+        if (targets.size() < 2 || !targets.remove(current.getEntity())) {
             super.activateImpl();
             return;
         }
+        targets.add(0, current.getEntity());
 
         LocationAPI location = fleet.getContainingLocation();
         SectorEntityToken proxy = location.addCustomEntity(
-            null, null, MagnetScavenge.TYPE, current.getEntity().getFaction().getId());
+            null, null, AoEScavenge.TYPE, current.getEntity().getFaction().getId());
         location.removeEntity(proxy);
         proxy.getLocation().set(fleet.getLocation());
-        proxy.getMemory().set(MagnetScavenge.TARGETS, targets, 0f);
-        proxy.getMemory().set(MagnetScavenge.FLAG, true, 0f);
+        proxy.getMemory().set(AoEScavenge.TARGETS, targets, 0f);
+        proxy.getMemory().set(AoEScavenge.FLAG, true, 0f);
 
         Global.getSector().getCampaignUI().showInteractionDialog(
             new RuleBasedInteractionDialogPluginImpl(),
