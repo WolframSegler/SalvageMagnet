@@ -29,8 +29,6 @@ import com.fs.starfarer.api.util.Misc;
 import salvage_magnet.rulecmd.MagnetScavenge;
 
 public final class SalvageTargets {
-    public static final float RADIUS = Global.getSettings().getFloat("magnetScavengeRadius");
-
     private static final Set<Class<?>> STOCK_SPECIALS = Set.of(
         BlueprintSpecial.BlueprintSpecialData.class,
         BreadcrumbSpecial.BreadcrumbSpecialData.class,
@@ -109,7 +107,7 @@ public final class SalvageTargets {
     }
 
     public static boolean isInRange(CampaignFleetAPI fleet, SectorEntityToken entity) {
-        return Misc.getDistance(fleet, entity) < RADIUS;
+        return Misc.getDistance(fleet, entity) < MagnetSettings.getRange();
     }
 
     private static boolean isOrdinarySalvage(SectorEntityToken entity) {

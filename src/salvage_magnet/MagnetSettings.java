@@ -16,9 +16,10 @@ public final class MagnetSettings {
     }
 
     public static void apply() {
-        MemoryAPI global = Global.getSector().getMemoryWithoutUpdate();
-        if (hasLunaLib() && LunaSettingsBridge.vanilla()) {
-            global.set(VANILLA, true);
+        final MemoryAPI global = Global.getSector().getMemoryWithoutUpdate();
+
+        if (hasLunaLib()) {
+            global.set(VANILLA, LunaSettingsBridge.vanilla());
         } else {
             global.unset(VANILLA);
         }
@@ -26,5 +27,9 @@ public final class MagnetSettings {
 
     public static boolean isVanilla() {
         return Global.getSector().getMemoryWithoutUpdate().getBoolean(VANILLA);
+    }
+
+    public static int getRange() {
+        return LunaSettingsBridge.salvageRange;
     }
 }
