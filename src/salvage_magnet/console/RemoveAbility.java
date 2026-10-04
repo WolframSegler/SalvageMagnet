@@ -15,7 +15,7 @@ public class RemoveAbility implements BaseCommand {
             return CommandResult.WRONG_CONTEXT;
         }
 
-        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        final CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
 
         if (playerFleet.hasAbility("magnet_scavenge")) {
             playerFleet.removeAbility("magnet_scavenge");

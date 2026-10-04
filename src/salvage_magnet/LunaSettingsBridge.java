@@ -21,7 +21,7 @@ final class LunaSettingsBridge implements LunaSettingsListener {
     }
 
     private static int getRange() {
-        final Integer range = LunaSettings.getInt(MagnetSettings.MOD_ID, "salvage_range");
+        final Integer range = LunaSettings.getInt(MagnetSettings.MOD_ID, "magnetScavengeRadius");
         return range == null ? (int) Global.getSettings().getFloat("magnetScavengeRadius") : range;
     }
 
