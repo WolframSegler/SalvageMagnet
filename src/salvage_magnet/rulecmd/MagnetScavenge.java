@@ -24,6 +24,7 @@ import com.fs.starfarer.api.impl.campaign.rulecmd.ShowDefaultVisual;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.SalvageEntity;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.SalvageGenFromSeed;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.BaseSalvageSpecial;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.special.ShipRecoverySpecial.ShipRecoverySpecialData;
 import com.fs.starfarer.api.impl.campaign.terrain.DebrisFieldTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.api.util.WeightedRandomPicker;
@@ -38,6 +39,7 @@ public class MagnetScavenge extends SalvageEntity {
     public static final String TYPE = "debris_field_shared";
     public static final String RECOVER = "magnetRecover";
     public static final String SKIP_RECOVERY = "magnetRecoverSkip";
+    public static final String LEAVE_RECOVERY = "magnetRecoverLeave";
     public static final String OPENED = "MagnetScavengeOpened";
     public static final String DERELICT_OPEN_RULE = "magnet_derelictOpen";
 
@@ -45,6 +47,7 @@ public class MagnetScavenge extends SalvageEntity {
         public List<SectorEntityToken> targets;
         public SectorEntityToken proxy;
         public List<MagnetRecovery.Candidate> recoverable = new ArrayList<>();
+        public Map<SectorEntityToken, ShipRecoverySpecialData> detached = new LinkedHashMap<>();
         public Set<SectorEntityToken> recovered = new HashSet<>();
         public Map<SectorEntityToken, CargoAPI> hauls = new LinkedHashMap<>();
         public CargoAPI loot = Global.getFactory().createCargo(true);
@@ -77,6 +80,8 @@ public class MagnetScavenge extends SalvageEntity {
             explore(state());
         } else if ("recover".equals(command)) {
             recover(state());
+        } else if ("leave".equals(command)) {
+            leave(state());
         } else if ("next".equals(command)) {
             next(state());
         } else if ("salvage".equals(command)) {
@@ -222,7 +227,7 @@ public class MagnetScavenge extends SalvageEntity {
             return;
         }
 
-        MagnetRecovery.detachFromSources(state.recoverable);
+        state.detached = MagnetRecovery.detachFromSources(state.recoverable);
 
         CampaignFleetAPI recoverable = Global.getFactory().createEmptyFleet("neutral", "patrolSmall", true);
         for (MagnetRecovery.Candidate candidate : state.recoverable) {
@@ -259,6 +264,52 @@ public class MagnetScavenge extends SalvageEntity {
         options.addOption("Consider ship recovery", RECOVER,
                 regular == 0 ? Misc.getStoryOptionColor() : Misc.getButtonTextColor(), null);
         options.addOption("Continue", SKIP_RECOVERY);
+        options.addOption("Leave the ships untouched", LEAVE_RECOVERY,
+                "Recoverable hulls are left as they are and skipped by the salvage operation, so you can return for them later.");
+    }
+
+    protected void leave(State state) {
+        new ShowDefaultVisual().execute(null, dialog, Misc.tokenize(""), map);
+        MagnetRecovery.reattach(state.detached);
+        state.detached.clear();
+
+        Set<SectorEntityToken> skipped = new HashSet<>();
+        for (MagnetRecovery.Candidate candidate : state.recoverable) {
+            skipped.add(candidate.source);
+        }
+        state.recoverable.clear();
+
+        for (SectorEntityToken source : skipped) {
+            int i = state.targets.indexOf(source);
+            if (i < 0) {
+                continue;
+            }
+            state.targets.remove(i);
+            if (i <= state.index) {
+                state.index--;
+            }
+            release(source);
+        }
+
+        String hulls = skipped.size() == 1 ? "the recoverable hull" : "the recoverable hulls";
+        text.addPara("Your salvage crews are instructed to leave %s untouched for now.",
+                Misc.getHighlightColor(), new String[] { hulls });
+
+        if (state.index + 1 >= state.targets.size()) {
+            for (SectorEntityToken target : state.targets) {
+                release(target);
+            }
+            if (state.proxy != null) {
+                release(state.proxy);
+            }
+            options.clearOptions();
+            String leave = memory.contains("$salvageLeaveText") ? memory.getString("$salvageLeaveText") : "Leave";
+            options.addOption(leave, "defaultLeave");
+            options.setShortcut("defaultLeave", 1, false, false, false, true);
+            return;
+        }
+
+        next(state);
     }
 
     protected List<FleetMemberAPI> storyPointPool(State state) {

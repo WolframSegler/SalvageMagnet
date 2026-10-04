@@ -46,17 +46,26 @@ public class MagnetRecovery extends ShipRecoverySpecial {
         return result;
     }
 
-    public static void detachFromSources(List<Candidate> candidates) {
+    public static Map<SectorEntityToken, ShipRecoverySpecialData> detachFromSources(List<Candidate> candidates) {
+        Map<SectorEntityToken, ShipRecoverySpecialData> detached = new LinkedHashMap<>();
         for (Candidate candidate : candidates) {
             if (!(Misc.getSalvageSpecial(candidate.source) instanceof ShipRecoverySpecialData data)) {
                 continue;
             }
 
+            detached.put(candidate.source, data);
             if (isStoryPointRecovery(data)) {
                 Misc.setSalvageSpecial(candidate.source, Misc.getPrevSalvageSpecial(candidate.source));
             } else {
                 candidate.source.getMemoryWithoutUpdate().unset("$salvageSpecialData");
             }
+        }
+        return detached;
+    }
+
+    public static void reattach(Map<SectorEntityToken, ShipRecoverySpecialData> detached) {
+        for (Map.Entry<SectorEntityToken, ShipRecoverySpecialData> entry : detached.entrySet()) {
+            Misc.setSalvageSpecial(entry.getKey(), entry.getValue());
         }
     }
 

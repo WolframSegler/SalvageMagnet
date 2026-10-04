@@ -17,6 +17,8 @@ magnet_scavengeRecoverSelected,DialogOptionSelected,"$option == magnetRecover
 $magnetScavenge",MagnetScavenge recover,,,
 magnet_scavengeRecoverSkipped,DialogOptionSelected,"$option == magnetRecoverSkip
 $magnetScavenge",MagnetScavenge next,,,
+magnet_scavengeRecoverLeft,DialogOptionSelected,"$option == magnetRecoverLeave
+$magnetScavenge",MagnetScavenge leave,,,
 magnet_scavengeSpecialDeferred,SalvageSpecialFinishedNoContinue,"$magnetScavenge
 $salvageSpecialData != null",MagnetScavenge defer,,,score 2: above sal_specialFinishedNoContinue (0)
 magnet_scavengeBeginSalvage,BeginSalvage,$magnetScavenge score:2,"MagnetScavenge salvage
