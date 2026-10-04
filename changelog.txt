@@ -1,0 +1,7 @@
+Version Unreleased
+- Derelict grouping is now decided by a normal OpenInteractionDialog rule instead of re-initialising an already opened dialog, so quest and mod dialogs on derelicts are no longer replaced
+- Rule scores lowered to one point above the vanilla salvage rules they replace, so more specific rules from vanilla or other mods take priority
+- Added LunaLib setting "Vanilla Salvage Behavior" (optional, sets $global.salvageMagnet_vanilla) to turn grouping off
+
+Version 1.0.0
+- Initial version

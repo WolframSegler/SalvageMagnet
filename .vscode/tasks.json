@@ -1,0 +1,88 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "delete-logs",
+      "type": "shell",
+      "command": "rm -f \"${workspaceFolder}/../../starsector.log\"",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "compile",
+      "type": "shell",
+      "command": "mvn clean package",
+      "dependsOn": "delete-logs",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "compile-no-tests",
+      "type": "shell",
+      "command": "mvn clean package -DskipTests",
+      "dependsOn": "delete-logs",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "launch-game",
+      "type": "shell",
+      "command": "\"${workspaceFolder}/../../starsector.sh\"",
+      "dependsOn": "compile",
+      "options": {
+        "cwd": "${workspaceFolder}/../.."
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "launch-game-no-tests",
+      "type": "shell",
+      "command": "\"${workspaceFolder}/../../starsector.sh\"",
+      "dependsOn": "compile-no-tests",
+      "options": {
+        "cwd": "${workspaceFolder}/../.."
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "launch-game-no-compile",
+      "type": "shell",
+      "command": "\"${workspaceFolder}/../../starsector.sh\"",
+      "dependsOn": "delete-logs",
+      "options": {
+        "cwd": "${workspaceFolder}/../.."
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

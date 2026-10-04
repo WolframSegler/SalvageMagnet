@@ -1,0 +1,2 @@
+command,class,tags,syntax,help
+RemoveMagnetScavenge,salvage_magnet.console.RemoveAbility,"salvage",remove_magnet_scavenge,"Removes the magnet scavenge ability and saves the game"

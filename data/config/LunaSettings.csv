@@ -1,0 +1,2 @@
+fieldID,fieldName,fieldType,defaultValue,secondaryValue,fieldDescription,minValue,maxValue,tab
+salvageMagnet_vanilla,Vanilla Salvage Behavior,Boolean,false,,"Disables grouping. Derelicts open their own salvage dialogs again and the Salvage Magnet ability scavenges only the debris field you are in, like the stock Scavenge ability.",,,

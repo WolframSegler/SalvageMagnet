@@ -1,0 +1,23 @@
+id,trigger,conditions,script,text,options,notes
+magnet_derelictOpen,OpenInteractionDialog,"$tag:salvageable
+!$global.salvageMagnet_vanilla score:0
+MagnetScavenge canGroup score:2",MagnetScavenge begin,,,"score 3: one above sal_derelictDefault (2), so any more specific rule from vanilla or another mod wins"
+magnet_scavengeOpen,OpenInteractionDialog,"$tag:salvageable
+$customType == debris_field_shared score:100
+$magnetScavenge",MagnetScavenge begin,,,score 102: one above sal_scavengeDebris (101)
+magnet_scavengeOpenedFields,MagnetScavengeOpened,$customType == debris_field_shared,"ShowDefaultVisual
+MagnetScavenge descAll
+FireBest SalvageCheckHostile",Your $shipOrFleet assumes a stable orbit relative to the surrounding debris.,,
+magnet_scavengeOpenedDerelicts,MagnetScavengeOpened,,"ShowDefaultVisual
+MagnetScavenge descAll
+FireBest SalvageCheckHostile",Your $shipOrFleet moves in among a loose cluster of drifting derelicts.,,
+magnet_scavengeExploreSelected,DialogOptionSelected,"$option == salExplore
+$magnetScavenge score:2",MagnetScavenge explore,,,score 3: one above sal_defenders (2)
+magnet_scavengeRecoverSelected,DialogOptionSelected,"$option == magnetRecover
+$magnetScavenge",MagnetScavenge recover,,,
+magnet_scavengeRecoverSkipped,DialogOptionSelected,"$option == magnetRecoverSkip
+$magnetScavenge",MagnetScavenge next,,,
+magnet_scavengeSpecialDeferred,SalvageSpecialFinishedNoContinue,"$magnetScavenge
+$salvageSpecialData != null",MagnetScavenge defer,,,score 2: above sal_specialFinishedNoContinue (0)
+magnet_scavengeBeginSalvage,BeginSalvage,$magnetScavenge score:2,"MagnetScavenge salvage
+MagnetScavenge next",,,score 2: one above sal_showRatingAndCostUnable (1)
