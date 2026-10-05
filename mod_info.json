@@ -3,7 +3,7 @@
     "description": "This mod adds a new ability called \"Salvage Magnet\" that combines all debris fields in an area of effect around the player fleet on scavenge ability use so they can be done with one dialog interaction. Works similarly with derelict wrecks encountered together. Radius configurable in settings.json",
     "author" : "roflos",
     "id" : "salvage_magnet",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "gameVersion": "0.98a-RC8",
     "jars" : ["./jars/salvage_magnet.jar"],
     "modPlugin" : "salvage_magnet.SalvageMagnetModPlugin"
